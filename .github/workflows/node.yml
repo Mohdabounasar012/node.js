@@ -1,0 +1,72 @@
+name: Deploy to AWS Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}       
+
+      - name: Allow SSH Access from Runner IP
+        run: |
+          IP=$(curl -s https://api64.ipify.org)
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${IP}/32 \
+            --region ${{ secrets.AWS_REGION }}
+
+      - name: Copy Files to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AWS_SERVER_HOST }}
+          username: ${{ secrets.AWS_SERVER_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "."
+          target: "~/node-app"
+
+      - name: Install Node.js and PM2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_SERVER_HOST }}
+          username: ${{ secrets.AWS_SERVER_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            sudo apt update
+            sudo apt install -y nodejs npm
+            sudo npm install -g pm2
+
+      - name: Run Deployment Script
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_SERVER_HOST }}
+          username: ${{ secrets.AWS_SERVER_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            cd ~/node-app
+            npm install
+            pm2 restart index.js --name "node-app" # Replace 'index.js' with your entry script name if it's different.
+
+      - name: Revoke SSH Access for Runner IP
+        run: |
+          IP=$(curl -s https://api64.ipify.org)
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${IP}/32 \
+            --region ${{ secrets.AWS_REGION }}
