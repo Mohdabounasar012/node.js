@@ -33,7 +33,7 @@ jobs:
       - name: Copy Files to Server
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ secrets.AWS_SERVER_HOST1 }}
+          host: ${{ secrets.AWS_SERVER_HOST }}
           username: ${{ secrets.AWS_SERVER_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           source: "."
@@ -42,7 +42,7 @@ jobs:
       - name: Install Node.js and PM2
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.AWS_SERVER_HOST1 }}
+          host: ${{ secrets.AWS_SERVER_HOST }}
           username: ${{ secrets.AWS_SERVER_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
@@ -53,7 +53,7 @@ jobs:
       - name: Run Deployment Script
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.AWS_SERVER_HOST1 }}
+          host: ${{ secrets.AWS_SERVER_HOST }}
           username: ${{ secrets.AWS_SERVER_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
